@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title> Bowl situation </title>
+</head>
+<body>
+<div id="load"><i>Loading... Please wait</i></div>
+<canvas id="myChart"></canvas>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/7.15.4/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.15.4/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.15.4/firebase-database.js"></script>
+
+<script>
+// Firebase configuration
+// you can get this object by connecting your Firebase project to a web project.
+var firebaseConfig = {
+apiKey: "",
+authDomain: "your-firebase-project-name.firebaseapp.com",
+databaseURL: "https://your-firebase-project-name.firebaseio.com",
+projectId: "your-firebase-project-name",
+storageBucket: "your-firebase-project-name.appspot.com",
+messagingSenderId: "",
+appId: "",
+measurementId: ""
+};
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+//Retrieve data from Firebase
+var timeLabels = [];
+var weightData = [];
+var eatData = [];
+var timeFormat = "HH:mm";
+var prevWeight = -10000;
+var eatenTot = 0;
+var bowl = database.ref("bowl");
+bowl.once('value', function(snapshot) {
+  snapshot.forEach(function(childSnapshot) {
+		var childKey = childSnapshot.key;
+		if (childKey != "id_to_write") {
+		var childData = childSnapshot.val();
+		var m = ""+childData.time_h+":"+childData.time_m;
+		timeLabels.push(m);
+		var weight = childData.weight;
+		weightData.push(weight);
+		if (weight < prevWeight) {
+			eatenTot += (prevWeight - weight);
+		}
+		eatData.push(eatenTot);
+		prevWeight = weight;
+	}
+});
+
+// Make Chart 
+var ctx = document.getElementById('myChart').getContext('2d');
+var chart = new Chart(ctx, {
+    // The type of chart we want to create
+    type: 'line',
+
+	scales: {
+		xAxes: [{
+			type: 'time',
+			time: {
+				parser: timeFormat,
+				tooltipFormat: 'HH:mm'
+			},
+			scaleLabel: {
+				display: true,
+				labelString: 'Time'
+			}
+		}],
+		yAxes: [{
+			scaleLabel: {
+				display: true,
+				labelString: 'Weight'
+			}
+		}]
+	},
+				
+    // The data for our dataset
+    data: {
+        labels: timeLabels,
+        datasets: [{
+			label: 'Quantity in bowl',
+            fill: false,
+            borderColor: 'rgb(255, 145, 77)',
+            backgroundColor: 'rgb(255, 145, 77)',
+            data: weightData,
+			pointRadius: 5,
+			pointHoverRadius: 10
+        }, {
+			label: 'Total quantity eaten',
+            fill: false,
+            borderColor: 'rgb(204, 78, 0)',
+            backgroundColor: 'rgb(204, 78, 0)',
+            data: eatData,
+			pointRadius: 5,
+			pointHoverRadius: 10
+        }]
+    },
+
+    // Configuration options go here
+    options: {
+					responsive: true,
+					title: {
+						display: false
+					},
+					legend: {
+						display: true
+					},
+					elements: {
+						point: {
+							pointStyle: 'rectRounded'
+						}
+					}
+				}
+});
+}); 
+
+var load = document.getElementById("load");
+load.style.display = "none";
+</script>
+	
+</body>
+</html>
